@@ -2,12 +2,7 @@
 
 ## Qué hace
 
-- Añade un formulario mediante shortcode: `[publicacion_actividades_form]`
-- El formulario solo es accesible para los roles configurados
-- Crea un **post** en estado **pending** (pendiente de revisión)
-- Campo obligatorio: **desplegable de etiqueta** (tags) limitado a una lista predefinida
-- Envía aviso por email al usuario solicitante cuando el post pase a **publish** (publicado)
-- Permite avisar por email a una lista de correos cuando un usuario **envía** el formulario
+- El contenido del post se genera como **bloques de Gutenberg** (encabezados/listas/párrafos)
 
 ## Instalación
 
@@ -17,7 +12,7 @@
 3. Ve a _Ajustes → Publicación Actividades_:
    - Selecciona roles permitidos
    - Selecciona las etiquetas permitidas
-    - Selecciona la categoría por defecto (opcional)
+   - Selecciona la categoría por defecto (opcional)
    - Configura emails de aviso al enviar (opcional)
    - Configura emails de aviso al publicarse (opcional)
 4. Inserta el shortcode en una página.

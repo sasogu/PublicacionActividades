@@ -77,7 +77,12 @@ function pact_render_form_shortcode($atts = []): string {
 
                 <div class="pact-field">
                     <label for="pact_tipo_actividad"><?php echo esc_html__('Tipo actividad', 'publicacion-actividades'); ?> <span aria-hidden="true">*</span></label>
-                    <input id="pact_tipo_actividad" name="pact_tipo_actividad" type="text" required aria-required="true" autocomplete="off" />
+                    <select id="pact_tipo_actividad" name="pact_tipo_actividad" required aria-required="true">
+                        <option value=""><?php echo esc_html__('Selecciona un tipo…', 'publicacion-actividades'); ?></option>
+                        <?php foreach ($tags as $tag) : ?>
+                            <option value="<?php echo esc_attr((string) $tag->term_id); ?>"><?php echo esc_html($tag->name); ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
 
                 <div class="pact-field">
@@ -93,6 +98,11 @@ function pact_render_form_shortcode($atts = []): string {
                 <div class="pact-field">
                     <label for="pact_hora"><?php echo esc_html__('Hora', 'publicacion-actividades'); ?> <span aria-hidden="true">*</span></label>
                     <input id="pact_hora" name="pact_hora" type="time" required aria-required="true" />
+                </div>
+
+                <div class="pact-field">
+                    <label for="pact_aportacion"><?php echo esc_html__('Aportación', 'publicacion-actividades'); ?></label>
+                    <input id="pact_aportacion" name="pact_aportacion" type="text" placeholder="" />
                 </div>
 
                 <div class="pact-field">
@@ -113,16 +123,6 @@ function pact_render_form_shortcode($atts = []): string {
                 <div class="pact-field">
                     <label for="pact_descripcion"><?php echo esc_html__('Descripción', 'publicacion-actividades'); ?></label>
                     <textarea id="pact_descripcion" name="pact_descripcion" rows="6"></textarea>
-                </div>
-
-                <div class="pact-field">
-                    <label for="pact_tag_id"><?php echo esc_html__('Etiqueta (obligatoria)', 'publicacion-actividades'); ?> <span aria-hidden="true">*</span></label>
-                    <select id="pact_tag_id" name="pact_tag_id" required aria-required="true">
-                        <option value=""><?php echo esc_html__('Selecciona una etiqueta…', 'publicacion-actividades'); ?></option>
-                        <?php foreach ($tags as $tag) : ?>
-                            <option value="<?php echo esc_attr((string) $tag->term_id); ?>"><?php echo esc_html($tag->name); ?></option>
-                        <?php endforeach; ?>
-                    </select>
                 </div>
 
                 <div class="pact-actions">
@@ -157,19 +157,29 @@ function pact_handle_form_submission(): void {
     $allowed_tag_ids = array_map('intval', (array) ($options['allowed_tag_ids'] ?? []));
     $default_category_id = isset($options['default_category_id']) ? (int) $options['default_category_id'] : 0;
 
-    $tipo_actividad = isset($_POST['pact_tipo_actividad']) ? sanitize_text_field((string) wp_unslash($_POST['pact_tipo_actividad'])) : '';
+    $tipo_actividad_tag_id = isset($_POST['pact_tipo_actividad']) ? absint((string) wp_unslash($_POST['pact_tipo_actividad'])) : 0;
     $fecha = isset($_POST['pact_fecha']) ? sanitize_text_field((string) wp_unslash($_POST['pact_fecha'])) : '';
     $lugar = isset($_POST['pact_lugar']) ? sanitize_text_field((string) wp_unslash($_POST['pact_lugar'])) : '';
     $hora = isset($_POST['pact_hora']) ? sanitize_text_field((string) wp_unslash($_POST['pact_hora'])) : '';
+    $aportacion = isset($_POST['pact_aportacion']) ? sanitize_text_field((string) wp_unslash($_POST['pact_aportacion'])) : '';
     $email_contacto = isset($_POST['pact_email_contacto']) ? sanitize_email((string) wp_unslash($_POST['pact_email_contacto'])) : '';
     $persona_contacto = isset($_POST['pact_persona_contacto']) ? sanitize_text_field((string) wp_unslash($_POST['pact_persona_contacto'])) : '';
     $telefono_contacto = isset($_POST['pact_telefono_contacto']) ? sanitize_text_field((string) wp_unslash($_POST['pact_telefono_contacto'])) : '';
     $descripcion = isset($_POST['pact_descripcion']) ? sanitize_textarea_field((string) wp_unslash($_POST['pact_descripcion'])) : '';
-    $tag_id = isset($_POST['pact_tag_id']) ? absint((string) wp_unslash($_POST['pact_tag_id'])) : 0;
+    $tipo_actividad = '';
 
     $errors = [];
-    if ($tipo_actividad === '') {
+    if ($tipo_actividad_tag_id <= 0) {
         $errors[] = __('El tipo de actividad es obligatorio.', 'publicacion-actividades');
+    } elseif (!in_array($tipo_actividad_tag_id, $allowed_tag_ids, true)) {
+        $errors[] = __('El tipo de actividad seleccionado no está permitido.', 'publicacion-actividades');
+    } else {
+        $term = get_term($tipo_actividad_tag_id, 'post_tag');
+        if (is_wp_error($term) || !$term || empty($term->term_id)) {
+            $errors[] = __('El tipo de actividad seleccionado no es válido.', 'publicacion-actividades');
+        } else {
+            $tipo_actividad = (string) $term->name;
+        }
     }
     if ($fecha === '') {
         $errors[] = __('La fecha es obligatoria.', 'publicacion-actividades');
@@ -193,11 +203,6 @@ function pact_handle_form_submission(): void {
     if ($telefono_contacto === '') {
         $errors[] = __('El teléfono de contacto es obligatorio.', 'publicacion-actividades');
     }
-    if ($tag_id <= 0) {
-        $errors[] = __('Debes seleccionar una etiqueta.', 'publicacion-actividades');
-    } elseif (!in_array($tag_id, $allowed_tag_ids, true)) {
-        $errors[] = __('La etiqueta seleccionada no está permitida.', 'publicacion-actividades');
-    }
 
     $redirect = wp_get_referer();
     if (!$redirect) {
@@ -220,34 +225,56 @@ function pact_handle_form_submission(): void {
         $post_title = __('Solicitud de actividad', 'publicacion-actividades');
     }
 
-    $content_html = '<div class="pact-actividad">';
-    $content_html .= '<h2>' . esc_html__('Datos de la actividad', 'publicacion-actividades') . '</h2>';
-    $content_html .= '<ul>';
-    $content_html .= '<li><strong>' . esc_html__('Tipo actividad:', 'publicacion-actividades') . '</strong> ' . esc_html($tipo_actividad) . '</li>';
-    $content_html .= '<li><strong>' . esc_html__('Fecha:', 'publicacion-actividades') . '</strong> ' . esc_html($fecha) . '</li>';
-    $content_html .= '<li><strong>' . esc_html__('Hora:', 'publicacion-actividades') . '</strong> ' . esc_html($hora) . '</li>';
-    $content_html .= '<li><strong>' . esc_html__('Lugar:', 'publicacion-actividades') . '</strong> ' . esc_html($lugar) . '</li>';
-    $content_html .= '</ul>';
+    // Generar contenido como bloques de Gutenberg.
+    $heading_block = static function (string $text): string {
+        return "<!-- wp:heading {\"level\":2} -->\n<h2>" . esc_html($text) . "</h2>\n<!-- /wp:heading -->\n";
+    };
+    $list_block = static function (array $items_html): string {
+        return "<!-- wp:list -->\n<ul>\n" . implode("\n", $items_html) . "\n</ul>\n<!-- /wp:list -->\n";
+    };
+    $paragraph_block = static function (string $text): string {
+        return "<!-- wp:paragraph -->\n<p>" . esc_html($text) . "</p>\n<!-- /wp:paragraph -->\n";
+    };
 
-    $content_html .= '<h2>' . esc_html__('Contacto', 'publicacion-actividades') . '</h2>';
-    $content_html .= '<ul>';
-    $content_html .= '<li><strong>' . esc_html__('Persona:', 'publicacion-actividades') . '</strong> ' . esc_html($persona_contacto) . '</li>';
-    $content_html .= '<li><strong>' . esc_html__('Email:', 'publicacion-actividades') . '</strong> ' . esc_html($email_contacto) . '</li>';
-    $content_html .= '<li><strong>' . esc_html__('Teléfono:', 'publicacion-actividades') . '</strong> ' . esc_html($telefono_contacto) . '</li>';
-    $content_html .= '</ul>';
+    $content_blocks = '';
 
-    if ($descripcion !== '') {
-        $content_html .= '<h2>' . esc_html__('Descripción', 'publicacion-actividades') . '</h2>';
-        $content_html .= wpautop(esc_html($descripcion));
+    $content_blocks .= $heading_block(__('Datos de la actividad', 'publicacion-actividades'));
+    $activity_items = [
+        '<li><strong>' . esc_html__('Tipo actividad:', 'publicacion-actividades') . '</strong> ' . esc_html($tipo_actividad) . '</li>',
+        '<li><strong>' . esc_html__('Fecha:', 'publicacion-actividades') . '</strong> ' . esc_html($fecha) . '</li>',
+        '<li><strong>' . esc_html__('Hora:', 'publicacion-actividades') . '</strong> ' . esc_html($hora) . '</li>',
+        '<li><strong>' . esc_html__('Lugar:', 'publicacion-actividades') . '</strong> ' . esc_html($lugar) . '</li>',
+    ];
+
+    if ($aportacion !== '') {
+        $activity_items[] = '<li><strong>' . esc_html__('Aportación:', 'publicacion-actividades') . '</strong> ' . esc_html($aportacion) . '</li>';
     }
 
-    $content_html .= '</div>';
+    $content_blocks .= $list_block($activity_items);
+
+    $content_blocks .= $heading_block(__('Contacto', 'publicacion-actividades'));
+    $content_blocks .= $list_block([
+        '<li><strong>' . esc_html__('Persona:', 'publicacion-actividades') . '</strong> ' . esc_html($persona_contacto) . '</li>',
+        '<li><strong>' . esc_html__('Email:', 'publicacion-actividades') . '</strong> ' . esc_html($email_contacto) . '</li>',
+        '<li><strong>' . esc_html__('Teléfono:', 'publicacion-actividades') . '</strong> ' . esc_html($telefono_contacto) . '</li>',
+    ]);
+
+    if ($descripcion !== '') {
+        $content_blocks .= $heading_block(__('Descripción', 'publicacion-actividades'));
+        $parts = preg_split("/\R{2,}/", trim($descripcion)) ?: [];
+        foreach ($parts as $p) {
+            $p = trim($p);
+            if ($p !== '') {
+                $content_blocks .= $paragraph_block($p);
+            }
+        }
+    }
 
     $post_id = wp_insert_post([
         'post_type' => 'post',
         'post_status' => 'pending',
         'post_title' => $post_title,
-        'post_content' => $content_html,
+        'post_content' => $content_blocks,
         'post_excerpt' => '',
         'post_author' => (int) $user->ID,
         'post_category' => ($default_category_id > 0) ? [$default_category_id] : [],
@@ -262,8 +289,10 @@ function pact_handle_form_submission(): void {
         exit;
     }
 
-    // Asignar etiqueta.
-    wp_set_post_terms((int) $post_id, [$tag_id], 'post_tag', false);
+    // Asignar etiqueta = tipo actividad seleccionado.
+    if ($tipo_actividad_tag_id > 0) {
+        wp_set_post_terms((int) $post_id, [$tipo_actividad_tag_id], 'post_tag', false);
+    }
 
     // Marcar el post como creado vía plugin (para emails).
     update_post_meta((int) $post_id, '_pact_submission', [
@@ -273,9 +302,11 @@ function pact_handle_form_submission(): void {
 
     // Guardar datos como meta (útil para administración/exports).
     update_post_meta((int) $post_id, '_pact_tipo_actividad', $tipo_actividad);
+    update_post_meta((int) $post_id, '_pact_tipo_actividad_tag_id', $tipo_actividad_tag_id);
     update_post_meta((int) $post_id, '_pact_fecha', $fecha);
     update_post_meta((int) $post_id, '_pact_lugar', $lugar);
     update_post_meta((int) $post_id, '_pact_hora', $hora);
+    update_post_meta((int) $post_id, '_pact_aportacion', $aportacion);
     update_post_meta((int) $post_id, '_pact_email_contacto', $email_contacto);
     update_post_meta((int) $post_id, '_pact_persona_contacto', $persona_contacto);
     update_post_meta((int) $post_id, '_pact_telefono_contacto', $telefono_contacto);
