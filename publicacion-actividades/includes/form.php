@@ -14,7 +14,8 @@ function pact_render_form_shortcode($atts = []): string {
     }
 
     $options = pact_options_get();
-    $allowed_tag_ids = (array) ($options['allowed_tag_ids'] ?? []);
+    $allowed_activity_tag_ids = (array) ($options['allowed_activity_tag_ids'] ?? $options['allowed_tag_ids'] ?? []);
+    $allowed_dojo_tag_ids = (array) ($options['allowed_dojo_tag_ids'] ?? []);
 
     // Carga CSS del formulario.
     wp_enqueue_style('pact-form');
@@ -32,17 +33,31 @@ function pact_render_form_shortcode($atts = []): string {
         }
     }
 
-    $tags = [];
-    if (!empty($allowed_tag_ids)) {
-        $tags = get_terms([
+    $activity_tags = [];
+    if (!empty($allowed_activity_tag_ids)) {
+        $activity_tags = get_terms([
             'taxonomy' => 'post_tag',
             'hide_empty' => false,
-            'include' => array_map('intval', $allowed_tag_ids),
+            'include' => array_map('intval', $allowed_activity_tag_ids),
             'orderby' => 'name',
             'order' => 'ASC',
         ]);
-        if (is_wp_error($tags)) {
-            $tags = [];
+        if (is_wp_error($activity_tags)) {
+            $activity_tags = [];
+        }
+    }
+
+    $dojo_tags = [];
+    if (!empty($allowed_dojo_tag_ids)) {
+        $dojo_tags = get_terms([
+            'taxonomy' => 'post_tag',
+            'hide_empty' => false,
+            'include' => array_map('intval', $allowed_dojo_tag_ids),
+            'orderby' => 'name',
+            'order' => 'ASC',
+        ]);
+        if (is_wp_error($dojo_tags)) {
+            $dojo_tags = [];
         }
     }
 
@@ -66,9 +81,9 @@ function pact_render_form_shortcode($atts = []): string {
             </div>
         <?php endif; ?>
 
-        <?php if (empty($tags)) : ?>
+        <?php if (empty($activity_tags) || empty($dojo_tags)) : ?>
             <div class="pact-notice pact-notice--warning" role="status" aria-live="polite">
-                <?php echo esc_html__('Este formulario no está configurado: faltan etiquetas permitidas. Contacta con un administrador.', 'publicacion-actividades'); ?>
+                <?php echo esc_html__('Este formulario no está configurado: faltan etiquetas permitidas para Tipo actividad y/o Dojo solicitante. Contacta con un administrador.', 'publicacion-actividades'); ?>
             </div>
         <?php else : ?>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" novalidate>
@@ -79,7 +94,17 @@ function pact_render_form_shortcode($atts = []): string {
                     <label for="pact_tipo_actividad"><?php echo esc_html__('Tipo actividad', 'publicacion-actividades'); ?> <span aria-hidden="true">*</span></label>
                     <select id="pact_tipo_actividad" name="pact_tipo_actividad" required aria-required="true">
                         <option value=""><?php echo esc_html__('Selecciona un tipo…', 'publicacion-actividades'); ?></option>
-                        <?php foreach ($tags as $tag) : ?>
+                        <?php foreach ($activity_tags as $tag) : ?>
+                            <option value="<?php echo esc_attr((string) $tag->term_id); ?>"><?php echo esc_html($tag->name); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="pact-field">
+                    <label for="pact_dojo_solicitante"><?php echo esc_html__('Dojo solicitante', 'publicacion-actividades'); ?> <span aria-hidden="true">*</span></label>
+                    <select id="pact_dojo_solicitante" name="pact_dojo_solicitante" required aria-required="true">
+                        <option value=""><?php echo esc_html__('Selecciona un dojo…', 'publicacion-actividades'); ?></option>
+                        <?php foreach ($dojo_tags as $tag) : ?>
                             <option value="<?php echo esc_attr((string) $tag->term_id); ?>"><?php echo esc_html($tag->name); ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -112,7 +137,7 @@ function pact_render_form_shortcode($atts = []): string {
 
                 <div class="pact-field">
                     <label for="pact_persona_contacto"><?php echo esc_html__('Persona contacto', 'publicacion-actividades'); ?> <span aria-hidden="true">*</span></label>
-                    <input id="pact_persona_contacto" name="pact_persona_contacto" type="text" required aria-required="true" autocomplete="name" />
+                    <input id="pact_persona_contacto" name="pact_persona_contacto" type="text" autocomplete="name" />
                 </div>
 
                 <div class="pact-field">
@@ -154,10 +179,12 @@ function pact_handle_form_submission(): void {
     }
 
     $options = pact_options_get();
-    $allowed_tag_ids = array_map('intval', (array) ($options['allowed_tag_ids'] ?? []));
+    $allowed_activity_tag_ids = array_map('intval', (array) ($options['allowed_activity_tag_ids'] ?? $options['allowed_tag_ids'] ?? []));
+    $allowed_dojo_tag_ids = array_map('intval', (array) ($options['allowed_dojo_tag_ids'] ?? []));
     $default_category_id = isset($options['default_category_id']) ? (int) $options['default_category_id'] : 0;
 
     $tipo_actividad_tag_id = isset($_POST['pact_tipo_actividad']) ? absint((string) wp_unslash($_POST['pact_tipo_actividad'])) : 0;
+    $dojo_solicitante_tag_id = isset($_POST['pact_dojo_solicitante']) ? absint((string) wp_unslash($_POST['pact_dojo_solicitante'])) : 0;
     $fecha = isset($_POST['pact_fecha']) ? sanitize_text_field((string) wp_unslash($_POST['pact_fecha'])) : '';
     $lugar = isset($_POST['pact_lugar']) ? sanitize_text_field((string) wp_unslash($_POST['pact_lugar'])) : '';
     $hora = isset($_POST['pact_hora']) ? sanitize_text_field((string) wp_unslash($_POST['pact_hora'])) : '';
@@ -167,11 +194,12 @@ function pact_handle_form_submission(): void {
     $telefono_contacto = isset($_POST['pact_telefono_contacto']) ? sanitize_text_field((string) wp_unslash($_POST['pact_telefono_contacto'])) : '';
     $descripcion = isset($_POST['pact_descripcion']) ? sanitize_textarea_field((string) wp_unslash($_POST['pact_descripcion'])) : '';
     $tipo_actividad = '';
+    $dojo_solicitante = '';
 
     $errors = [];
     if ($tipo_actividad_tag_id <= 0) {
         $errors[] = __('El tipo de actividad es obligatorio.', 'publicacion-actividades');
-    } elseif (!in_array($tipo_actividad_tag_id, $allowed_tag_ids, true)) {
+    } elseif (!in_array($tipo_actividad_tag_id, $allowed_activity_tag_ids, true)) {
         $errors[] = __('El tipo de actividad seleccionado no está permitido.', 'publicacion-actividades');
     } else {
         $term = get_term($tipo_actividad_tag_id, 'post_tag');
@@ -179,6 +207,19 @@ function pact_handle_form_submission(): void {
             $errors[] = __('El tipo de actividad seleccionado no es válido.', 'publicacion-actividades');
         } else {
             $tipo_actividad = (string) $term->name;
+        }
+    }
+
+    if ($dojo_solicitante_tag_id <= 0) {
+        $errors[] = __('El dojo solicitante es obligatorio.', 'publicacion-actividades');
+    } elseif (!in_array($dojo_solicitante_tag_id, $allowed_dojo_tag_ids, true)) {
+        $errors[] = __('El dojo solicitante seleccionado no está permitido.', 'publicacion-actividades');
+    } else {
+        $term = get_term($dojo_solicitante_tag_id, 'post_tag');
+        if (is_wp_error($term) || !$term || empty($term->term_id)) {
+            $errors[] = __('El dojo solicitante seleccionado no es válido.', 'publicacion-actividades');
+        } else {
+            $dojo_solicitante = (string) $term->name;
         }
     }
     if ($fecha === '') {
@@ -196,9 +237,6 @@ function pact_handle_form_submission(): void {
     }
     if ($email_contacto === '' || !is_email($email_contacto)) {
         $errors[] = __('El email de contacto es obligatorio y debe ser válido.', 'publicacion-actividades');
-    }
-    if ($persona_contacto === '') {
-        $errors[] = __('La persona de contacto es obligatoria.', 'publicacion-actividades');
     }
     if ($telefono_contacto === '') {
         $errors[] = __('El teléfono de contacto es obligatorio.', 'publicacion-actividades');
@@ -241,6 +279,7 @@ function pact_handle_form_submission(): void {
     $content_blocks .= $heading_block(__('Datos de la actividad', 'publicacion-actividades'));
     $activity_items = [
         '<li><strong>' . esc_html__('Tipo actividad:', 'publicacion-actividades') . '</strong> ' . esc_html($tipo_actividad) . '</li>',
+        '<li><strong>' . esc_html__('Dojo solicitante:', 'publicacion-actividades') . '</strong> ' . esc_html($dojo_solicitante) . '</li>',
         '<li><strong>' . esc_html__('Fecha:', 'publicacion-actividades') . '</strong> ' . esc_html($fecha) . '</li>',
         '<li><strong>' . esc_html__('Hora:', 'publicacion-actividades') . '</strong> ' . esc_html($hora) . '</li>',
         '<li><strong>' . esc_html__('Lugar:', 'publicacion-actividades') . '</strong> ' . esc_html($lugar) . '</li>',
@@ -253,11 +292,16 @@ function pact_handle_form_submission(): void {
     $content_blocks .= $list_block($activity_items);
 
     $content_blocks .= $heading_block(__('Contacto', 'publicacion-actividades'));
-    $content_blocks .= $list_block([
-        '<li><strong>' . esc_html__('Persona:', 'publicacion-actividades') . '</strong> ' . esc_html($persona_contacto) . '</li>',
+    $contact_items = [
         '<li><strong>' . esc_html__('Email:', 'publicacion-actividades') . '</strong> ' . esc_html($email_contacto) . '</li>',
         '<li><strong>' . esc_html__('Teléfono:', 'publicacion-actividades') . '</strong> ' . esc_html($telefono_contacto) . '</li>',
-    ]);
+    ];
+
+    if ($persona_contacto !== '') {
+        array_unshift($contact_items, '<li><strong>' . esc_html__('Persona:', 'publicacion-actividades') . '</strong> ' . esc_html($persona_contacto) . '</li>');
+    }
+
+    $content_blocks .= $list_block($contact_items);
 
     if ($descripcion !== '') {
         $content_blocks .= $heading_block(__('Descripción', 'publicacion-actividades'));
@@ -289,9 +333,13 @@ function pact_handle_form_submission(): void {
         exit;
     }
 
-    // Asignar etiqueta = tipo actividad seleccionado.
-    if ($tipo_actividad_tag_id > 0) {
-        wp_set_post_terms((int) $post_id, [$tipo_actividad_tag_id], 'post_tag', false);
+    // Asignar tags: tipo actividad + dojo solicitante.
+    $post_tags = array_values(array_unique(array_filter([
+        (int) $tipo_actividad_tag_id,
+        (int) $dojo_solicitante_tag_id,
+    ])));
+    if (!empty($post_tags)) {
+        wp_set_post_terms((int) $post_id, $post_tags, 'post_tag', false);
     }
 
     // Marcar el post como creado vía plugin (para emails).
@@ -303,6 +351,8 @@ function pact_handle_form_submission(): void {
     // Guardar datos como meta (útil para administración/exports).
     update_post_meta((int) $post_id, '_pact_tipo_actividad', $tipo_actividad);
     update_post_meta((int) $post_id, '_pact_tipo_actividad_tag_id', $tipo_actividad_tag_id);
+    update_post_meta((int) $post_id, '_pact_dojo_solicitante', $dojo_solicitante);
+    update_post_meta((int) $post_id, '_pact_dojo_solicitante_tag_id', $dojo_solicitante_tag_id);
     update_post_meta((int) $post_id, '_pact_fecha', $fecha);
     update_post_meta((int) $post_id, '_pact_lugar', $lugar);
     update_post_meta((int) $post_id, '_pact_hora', $hora);

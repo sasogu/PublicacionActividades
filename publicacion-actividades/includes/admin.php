@@ -33,9 +33,17 @@ function pact_register_settings(): void {
     );
 
     add_settings_field(
-        'allowed_tag_ids',
-        __('Etiquetas permitidas (desplegable)', 'publicacion-actividades'),
-        'pact_field_allowed_tags',
+        'allowed_activity_tag_ids',
+        __('Etiquetas permitidas (Tipo actividad)', 'publicacion-actividades'),
+        'pact_field_allowed_activity_tags',
+        'pact_settings',
+        'pact_section_main'
+    );
+
+    add_settings_field(
+        'allowed_dojo_tag_ids',
+        __('Etiquetas permitidas (Dojo solicitante)', 'publicacion-actividades'),
+        'pact_field_allowed_dojo_tags',
         'pact_settings',
         'pact_section_main'
     );
@@ -131,10 +139,18 @@ function pact_sanitize_options($input): array {
     $roles = array_values(array_intersect($roles, $valid_roles));
     $output['allowed_roles'] = $roles;
 
-    // Tags permitidas.
-    $tag_ids = isset($input['allowed_tag_ids']) ? (array) $input['allowed_tag_ids'] : [];
-    $tag_ids = array_values(array_filter(array_map('absint', $tag_ids)));
-    $output['allowed_tag_ids'] = $tag_ids;
+    // Tags permitidas (actividad).
+    $activity_tag_ids = isset($input['allowed_activity_tag_ids']) ? (array) $input['allowed_activity_tag_ids'] : [];
+    $activity_tag_ids = array_values(array_filter(array_map('absint', $activity_tag_ids)));
+    $output['allowed_activity_tag_ids'] = $activity_tag_ids;
+
+    // Tags permitidas (dojo solicitante).
+    $dojo_tag_ids = isset($input['allowed_dojo_tag_ids']) ? (array) $input['allowed_dojo_tag_ids'] : [];
+    $dojo_tag_ids = array_values(array_filter(array_map('absint', $dojo_tag_ids)));
+    $output['allowed_dojo_tag_ids'] = $dojo_tag_ids;
+
+    // Compat: mantener allowed_tag_ids como alias de actividad.
+    $output['allowed_tag_ids'] = $activity_tag_ids;
 
     // Default category.
     $cat_id = isset($input['default_category_id']) ? absint((string) $input['default_category_id']) : 0;
@@ -190,10 +206,7 @@ function pact_field_allowed_roles(): void {
     echo '</fieldset>';
 }
 
-function pact_field_allowed_tags(): void {
-    $options = pact_options_get();
-    $selected = $options['allowed_tag_ids'] ?? [];
-
+function pact_get_all_tags_for_settings(): array {
     $tags = get_terms([
         'taxonomy' => 'post_tag',
         'hide_empty' => false,
@@ -202,15 +215,38 @@ function pact_field_allowed_tags(): void {
         'order' => 'ASC',
     ]);
 
-    echo '<select name="' . esc_attr(PACT_OPTION_KEY) . '[allowed_tag_ids][]" multiple size="10" style="min-width:320px;">';
-    if (!is_wp_error($tags)) {
-        foreach ($tags as $tag) {
-            $is_selected = in_array((int) $tag->term_id, array_map('intval', (array) $selected), true) ? 'selected' : '';
-            echo '<option value="' . esc_attr((string) $tag->term_id) . '" ' . $is_selected . '>' . esc_html($tag->name) . '</option>';
-        }
+    if (is_wp_error($tags) || empty($tags)) {
+        $create_url = admin_url('edit-tags.php?taxonomy=post_tag');
+        echo '<p class="description">' . esc_html__('No se han encontrado etiquetas (tags). Crea al menos una etiqueta para poder seleccionarla aquí.', 'publicacion-actividades') . '</p>';
+        echo '<p><a href="' . esc_url($create_url) . '">' . esc_html__('Ir a Etiquetas', 'publicacion-actividades') . '</a></p>';
+        return [];
+    }
+
+    return (array) $tags;
+}
+
+function pact_render_tag_multiselect(string $field_key, array $selected_ids, string $description): void {
+    $tags = pact_get_all_tags_for_settings();
+
+    echo '<select name="' . esc_attr(PACT_OPTION_KEY) . '[' . esc_attr($field_key) . '][]" multiple size="10" style="min-width:320px;">';
+    foreach ($tags as $tag) {
+        $is_selected = in_array((int) $tag->term_id, array_map('intval', (array) $selected_ids), true) ? 'selected' : '';
+        echo '<option value="' . esc_attr((string) $tag->term_id) . '" ' . $is_selected . '>' . esc_html($tag->name) . '</option>';
     }
     echo '</select>';
-    echo '<p class="description">' . esc_html__('Selecciona qué etiquetas pueden elegirse en el desplegable del formulario (al menos 1).', 'publicacion-actividades') . '</p>';
+    echo '<p class="description">' . esc_html($description) . '</p>';
+}
+
+function pact_field_allowed_activity_tags(): void {
+    $options = pact_options_get();
+    $selected = (array) ($options['allowed_activity_tag_ids'] ?? $options['allowed_tag_ids'] ?? []);
+    pact_render_tag_multiselect('allowed_activity_tag_ids', $selected, __('Estas etiquetas alimentan el desplegable “Tipo actividad” del formulario (selecciona al menos 1).', 'publicacion-actividades'));
+}
+
+function pact_field_allowed_dojo_tags(): void {
+    $options = pact_options_get();
+    $selected = (array) ($options['allowed_dojo_tag_ids'] ?? []);
+    pact_render_tag_multiselect('allowed_dojo_tag_ids', $selected, __('Estas etiquetas alimentan el desplegable “Dojo solicitante” del formulario (selecciona al menos 1).', 'publicacion-actividades'));
 }
 
 function pact_field_default_category(): void {

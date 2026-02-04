@@ -13,8 +13,11 @@ function pact_options_default(): array {
         // Por defecto: administradores y editores.
         'allowed_roles' => ['administrator', 'editor'],
 
-        // Etiquetas (tags) permitidas para el desplegable (IDs).
+        // Etiquetas (tags) permitidas (IDs).
+        // Compat: allowed_tag_ids existía originalmente y se usará como fallback para actividad.
         'allowed_tag_ids' => [],
+        'allowed_activity_tag_ids' => [],
+        'allowed_dojo_tag_ids' => [],
 
         // Categoría por defecto para los posts creados (ID). 0 = sin asignar.
         'default_category_id' => 0,
@@ -46,7 +49,14 @@ function pact_options_get(): array {
         return $defaults;
     }
 
-    return array_merge($defaults, $saved);
+    $merged = array_merge($defaults, $saved);
+
+    // Compat: si venimos de una versión anterior, allowed_tag_ids se interpretaba como actividad.
+    if (empty($merged['allowed_activity_tag_ids']) && !empty($merged['allowed_tag_ids'])) {
+        $merged['allowed_activity_tag_ids'] = (array) $merged['allowed_tag_ids'];
+    }
+
+    return $merged;
 }
 
 function pact_options_ensure_defaults(): void {
