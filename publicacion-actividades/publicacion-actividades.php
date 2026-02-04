@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Publicación de Actividades
  * Description: Formulario (por roles) para solicitar publicaciones; crea posts en estado pendiente y notifica por email al publicarse.
- * Version: 0.3.2
+ * Version: 0.4.0
  * Author: Tu equipo
  * Text Domain: publicacion-actividades
  * Domain Path: /languages
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('PACT_PLUGIN_VERSION', '0.3.2');
+define('PACT_PLUGIN_VERSION', '0.4.0');
 define('PACT_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PACT_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('PACT_OPTION_KEY', 'pact_options');

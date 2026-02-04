@@ -3,6 +3,10 @@
 ## Qué hace
 
 - El contenido del post se genera como **bloques de Gutenberg** (encabezados/listas/párrafos)
+- Crea una entrada en estado **Pendiente de revisión** (pending)
+- Asigna **etiquetas** configuradas desde ajustes (2 listas: “Tipo actividad” y “Dojo solicitante”)
+   - Nota: estas selecciones se usan para etiquetar el post, pero no se imprimen dentro del bloque “Datos de la actividad”
+- Puede enviar emails de aviso al enviar y/o al publicarse (configurable)
 
 ## Instalación
 
@@ -11,11 +15,14 @@
 2. Activa el plugin en _Plugins_.
 3. Ve a _Ajustes → Publicación Actividades_:
    - Selecciona roles permitidos
-   - Selecciona las etiquetas permitidas
+   - Selecciona las etiquetas permitidas para:
+     - Tipo de actividad
+     - Dojo solicitante
    - Selecciona la categoría por defecto (opcional)
    - Configura emails de aviso al enviar (opcional)
    - Configura emails de aviso al publicarse (opcional)
-4. Inserta el shortcode en una página.
+4. Inserta el shortcode en una página:
+   - `[publicacion_actividades_form]`
 
 ## Notas
 

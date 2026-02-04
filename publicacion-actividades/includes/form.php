@@ -82,7 +82,7 @@ function pact_render_form_shortcode($atts = []): string {
                 <?php echo esc_html__('Este formulario no está configurado: faltan etiquetas permitidas para Tipo actividad y/o Dojo solicitante. Contacta con un administrador.', 'publicacion-actividades'); ?>
             </div>
         <?php else : ?>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" novalidate>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data" novalidate>
                 <input type="hidden" name="action" value="pact_submit" />
                 <?php wp_nonce_field('pact_submit_form', 'pact_nonce'); ?>
 
@@ -146,6 +146,20 @@ function pact_render_form_shortcode($atts = []): string {
                     <textarea id="pact_descripcion" name="pact_descripcion" rows="6"></textarea>
                 </div>
 
+                <div class="pact-field">
+                    <label for="pact_images"><?php echo esc_html__('Imágenes (opcional)', 'publicacion-actividades'); ?></label>
+                    <input id="pact_images" name="pact_images[]" type="file" accept="image/*" multiple />
+                    <p class="pact-help">
+                        <?php
+                        /* translators: %s: maximum upload size */
+                        printf(
+                            esc_html__('Puedes adjuntar una o varias imágenes. Tamaño máximo por archivo: %s.', 'publicacion-actividades'),
+                            esc_html(size_format((int) wp_max_upload_size()))
+                        );
+                        ?>
+                    </p>
+                </div>
+
                 <div class="pact-actions">
                     <button type="submit"><?php echo esc_html__('Enviar solicitud', 'publicacion-actividades'); ?></button>
                 </div>
@@ -191,6 +205,8 @@ function pact_handle_form_submission(): void {
     $descripcion = isset($_POST['pact_descripcion']) ? sanitize_textarea_field((string) wp_unslash($_POST['pact_descripcion'])) : '';
     $tipo_actividad = '';
     $dojo_solicitante = '';
+
+    $uploaded_images = pact_get_uploaded_files('pact_images');
 
     $errors = [];
     if ($tipo_actividad_tag_id <= 0) {
@@ -238,6 +254,54 @@ function pact_handle_form_submission(): void {
         $errors[] = __('El teléfono de contacto es obligatorio.', 'publicacion-actividades');
     }
 
+    $max_images = (int) apply_filters('pact_max_images', 6);
+    if ($max_images < 0) {
+        $max_images = 0;
+    }
+
+    if (!empty($uploaded_images) && count($uploaded_images) > $max_images) {
+        /* translators: %d: maximum number of images */
+        $errors[] = sprintf(__('Puedes subir como máximo %d imágenes.', 'publicacion-actividades'), $max_images);
+    }
+
+    foreach ($uploaded_images as $file) {
+        $error = isset($file['error']) ? (int) $file['error'] : UPLOAD_ERR_NO_FILE;
+        $tmp_name = isset($file['tmp_name']) ? (string) $file['tmp_name'] : '';
+        $name = isset($file['name']) ? (string) $file['name'] : '';
+        $size = isset($file['size']) ? (int) $file['size'] : 0;
+
+        if ($error === UPLOAD_ERR_NO_FILE || $name === '') {
+            continue;
+        }
+
+        if ($error !== UPLOAD_ERR_OK) {
+            $errors[] = __('No se pudo subir una de las imágenes. Revisa el archivo e inténtalo de nuevo.', 'publicacion-actividades');
+            continue;
+        }
+
+        if ($size <= 0 || $size > (int) wp_max_upload_size()) {
+            $errors[] = __('Una de las imágenes supera el tamaño máximo permitido.', 'publicacion-actividades');
+            continue;
+        }
+
+        if ($tmp_name === '' || !is_uploaded_file($tmp_name)) {
+            $errors[] = __('Una de las imágenes no es válida.', 'publicacion-actividades');
+            continue;
+        }
+
+        $filetype = wp_check_filetype_and_ext($tmp_name, $name);
+        $allowed_mimes = pact_allowed_image_mimes();
+        if (empty($filetype['type']) || !in_array((string) $filetype['type'], array_values($allowed_mimes), true)) {
+            $errors[] = __('Solo se permiten imágenes JPG, PNG, GIF o WebP.', 'publicacion-actividades');
+            continue;
+        }
+
+        if (@getimagesize($tmp_name) === false) {
+            $errors[] = __('Una de las imágenes no parece ser un archivo de imagen válido.', 'publicacion-actividades');
+            continue;
+        }
+    }
+
     $redirect = wp_get_referer();
     if (!$redirect) {
         $redirect = home_url('/');
@@ -259,6 +323,12 @@ function pact_handle_form_submission(): void {
         $post_title = __('Solicitud de actividad', 'publicacion-actividades');
     }
 
+    $fecha_display = $fecha;
+    $dt = DateTime::createFromFormat('Y-m-d', $fecha);
+    if ($dt instanceof DateTime) {
+        $fecha_display = $dt->format('d/m/Y');
+    }
+
     // Generar contenido como bloques de Gutenberg.
     $heading_block = static function (string $text): string {
         return "<!-- wp:heading {\"level\":2} -->\n<h2>" . esc_html($text) . "</h2>\n<!-- /wp:heading -->\n";
@@ -274,9 +344,7 @@ function pact_handle_form_submission(): void {
 
     $content_blocks .= $heading_block(__('Datos de la actividad', 'publicacion-actividades'));
     $activity_items = [
-        '<li><strong>' . esc_html__('Tipo actividad:', 'publicacion-actividades') . '</strong> ' . esc_html($tipo_actividad) . '</li>',
-        '<li><strong>' . esc_html__('Dojo solicitante:', 'publicacion-actividades') . '</strong> ' . esc_html($dojo_solicitante) . '</li>',
-        '<li><strong>' . esc_html__('Fecha:', 'publicacion-actividades') . '</strong> ' . esc_html($fecha) . '</li>',
+        '<li><strong>' . esc_html__('Fecha:', 'publicacion-actividades') . '</strong> ' . esc_html($fecha_display) . '</li>',
         '<li><strong>' . esc_html__('Hora:', 'publicacion-actividades') . '</strong> ' . esc_html($hora) . '</li>',
         '<li><strong>' . esc_html__('Lugar:', 'publicacion-actividades') . '</strong> ' . esc_html($lugar) . '</li>',
     ];
@@ -358,10 +426,174 @@ function pact_handle_form_submission(): void {
     update_post_meta((int) $post_id, '_pact_telefono_contacto', $telefono_contacto);
     update_post_meta((int) $post_id, '_pact_descripcion', $descripcion);
 
+    // Procesar imágenes (opcional): crear adjuntos y añadirlos al contenido como bloques.
+    $image_ids = [];
+    if (!empty($uploaded_images)) {
+        $result = pact_upload_images_as_attachments((int) $post_id, $uploaded_images);
+        if (is_wp_error($result)) {
+            // Si falla la subida, eliminar el post para no dejar solicitudes incompletas.
+            wp_delete_post((int) $post_id, true);
+            $redirect = add_query_arg([
+                'pact_status' => 'error',
+                'pact_error' => rawurlencode($result->get_error_message()),
+            ], $redirect);
+            wp_safe_redirect($redirect);
+            exit;
+        }
+
+        $image_ids = (array) $result;
+        if (!empty($image_ids)) {
+            update_post_meta((int) $post_id, '_pact_image_ids', $image_ids);
+
+            if (function_exists('has_post_thumbnail') && !has_post_thumbnail((int) $post_id)) {
+                set_post_thumbnail((int) $post_id, (int) $image_ids[0]);
+            }
+
+            $content_blocks .= $heading_block(__('Imágenes', 'publicacion-actividades'));
+
+            if (count($image_ids) > 1) {
+                $gallery_ids = array_values(array_map('intval', $image_ids));
+                $content_blocks .= "<!-- wp:gallery {\"linkTo\":\"none\",\"ids\":" . wp_json_encode($gallery_ids) . "} -->\n";
+                $content_blocks .= '<figure class="wp-block-gallery has-nested-images columns-default is-cropped">' . "\n";
+
+                foreach ($image_ids as $attach_id) {
+                    $attach_id = (int) $attach_id;
+                    $url = wp_get_attachment_url($attach_id);
+                    if (!$url) {
+                        continue;
+                    }
+
+                    $content_blocks .= "<!-- wp:image {\"id\":" . $attach_id . ",\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n";
+                    $content_blocks .= '<figure class="wp-block-image size-large"><img src="' . esc_url($url) . '" alt="" class="wp-image-' . esc_attr((string) $attach_id) . '" /></figure>' . "\n";
+                    $content_blocks .= "<!-- /wp:image -->\n";
+                }
+
+                $content_blocks .= "</figure>\n";
+                $content_blocks .= "<!-- /wp:gallery -->\n";
+            } else {
+                $attach_id = (int) $image_ids[0];
+                $url = wp_get_attachment_url($attach_id);
+                if ($url) {
+                    $content_blocks .= "<!-- wp:image {\"id\":" . $attach_id . ",\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n";
+                    $content_blocks .= '<figure class="wp-block-image size-large"><img src="' . esc_url($url) . '" alt="" class="wp-image-' . esc_attr((string) $attach_id) . '" /></figure>' . "\n";
+                    $content_blocks .= "<!-- /wp:image -->\n";
+                }
+            }
+
+            wp_update_post([
+                'ID' => (int) $post_id,
+                'post_content' => $content_blocks,
+            ]);
+        }
+    }
+
     // Aviso por email a los correos configurados al enviar.
     pact_send_submission_notification_email((int) $post_id, $user);
 
     $redirect = add_query_arg(['pact_status' => 'success'], $redirect);
     wp_safe_redirect($redirect);
     exit;
+}
+
+function pact_allowed_image_mimes(): array {
+    return [
+        'jpg|jpeg|jpe' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+    ];
+}
+
+function pact_get_uploaded_files(string $input_name): array {
+    if (empty($_FILES[$input_name]) || !is_array($_FILES[$input_name]) || empty($_FILES[$input_name]['name'])) {
+        return [];
+    }
+
+    $names = (array) $_FILES[$input_name]['name'];
+    $types = (array) ($_FILES[$input_name]['type'] ?? []);
+    $tmp_names = (array) ($_FILES[$input_name]['tmp_name'] ?? []);
+    $errors = (array) ($_FILES[$input_name]['error'] ?? []);
+    $sizes = (array) ($_FILES[$input_name]['size'] ?? []);
+
+    $out = [];
+    foreach ($names as $i => $name) {
+        $name = (string) $name;
+        if ($name === '') {
+            continue;
+        }
+        $out[] = [
+            'name' => $name,
+            'type' => (string) ($types[$i] ?? ''),
+            'tmp_name' => (string) ($tmp_names[$i] ?? ''),
+            'error' => (int) ($errors[$i] ?? UPLOAD_ERR_NO_FILE),
+            'size' => (int) ($sizes[$i] ?? 0),
+        ];
+    }
+
+    return $out;
+}
+
+/**
+ * @param array<int, array{name:string,type:string,tmp_name:string,error:int,size:int}> $files
+ * @return array<int,int>|WP_Error
+ */
+function pact_upload_images_as_attachments(int $post_id, array $files) {
+    require_once ABSPATH . 'wp-admin/includes/file.php';
+    require_once ABSPATH . 'wp-admin/includes/image.php';
+
+    $allowed_mimes = pact_allowed_image_mimes();
+    $attachment_ids = [];
+
+    foreach ($files as $file) {
+        $error = isset($file['error']) ? (int) $file['error'] : UPLOAD_ERR_NO_FILE;
+        if ($error === UPLOAD_ERR_NO_FILE || (string) ($file['name'] ?? '') === '') {
+            continue;
+        }
+
+        if ($error !== UPLOAD_ERR_OK) {
+            return new WP_Error('pact_upload_error', __('No se pudo subir una de las imágenes.', 'publicacion-actividades'));
+        }
+
+        $upload = wp_handle_upload(
+            $file,
+            [
+                'test_form' => false,
+                'mimes' => $allowed_mimes,
+            ]
+        );
+
+        if (!is_array($upload) || !empty($upload['error'])) {
+            return new WP_Error('pact_upload_error', __('Error al procesar una de las imágenes.', 'publicacion-actividades'));
+        }
+
+        $file_path = (string) $upload['file'];
+        $mime_type = (string) ($upload['type'] ?? '');
+        $url = (string) ($upload['url'] ?? '');
+
+        $attachment = [
+            'post_mime_type' => $mime_type,
+            'post_title' => sanitize_file_name(pathinfo($file_path, PATHINFO_FILENAME)),
+            'post_content' => '',
+            'post_status' => 'inherit',
+        ];
+
+        $attach_id = wp_insert_attachment($attachment, $file_path, $post_id);
+        if (is_wp_error($attach_id) || !$attach_id) {
+            return new WP_Error('pact_upload_error', __('No se pudo adjuntar una de las imágenes.', 'publicacion-actividades'));
+        }
+
+        $attach_data = wp_generate_attachment_metadata((int) $attach_id, $file_path);
+        if (is_array($attach_data)) {
+            wp_update_attachment_metadata((int) $attach_id, $attach_data);
+        }
+
+        // Guardar la URL como fallback (no es imprescindible, pero útil si algún tema rompe urls).
+        if ($url !== '') {
+            update_post_meta((int) $attach_id, '_pact_upload_url', esc_url_raw($url));
+        }
+
+        $attachment_ids[] = (int) $attach_id;
+    }
+
+    return $attachment_ids;
 }
