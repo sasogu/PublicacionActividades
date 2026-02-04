@@ -5,7 +5,11 @@
 - El contenido del post se genera como **bloques de Gutenberg** (encabezados/listas/párrafos)
 - Crea una entrada en estado **Pendiente de revisión** (pending)
 - Asigna **etiquetas** configuradas desde ajustes (2 listas: “Tipo actividad” y “Dojo solicitante”)
-   - Nota: estas selecciones se usan para etiquetar el post, pero no se imprimen dentro del bloque “Datos de la actividad”
+  - Nota: estas selecciones se usan para etiquetar el post, pero no se imprimen dentro del bloque “Datos de la actividad”
+- Permite adjuntar **una o varias imágenes** desde el formulario
+  - Si se adjunta 1 imagen: se inserta un bloque `Imagen`
+  - Si se adjuntan 2+ imágenes: se inserta un bloque `Galería`
+  - La primera imagen se establece como **imagen destacada** (si el post no tenía)
 - Puede enviar emails de aviso al enviar y/o al publicarse (configurable)
 
 ## Instalación
