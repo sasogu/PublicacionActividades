@@ -33,33 +33,29 @@ function pact_render_form_shortcode($atts = []): string {
         }
     }
 
-    $activity_tags = [];
-    if (!empty($allowed_activity_tag_ids)) {
-        $activity_tags = get_terms([
-            'taxonomy' => 'post_tag',
-            'hide_empty' => false,
-            'include' => array_map('intval', $allowed_activity_tag_ids),
-            'orderby' => 'name',
-            'order' => 'ASC',
-        ]);
-        if (is_wp_error($activity_tags)) {
-            $activity_tags = [];
+    $get_tags_by_ids = static function (array $ids): array {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (empty($ids)) {
+            return [];
         }
-    }
 
-    $dojo_tags = [];
-    if (!empty($allowed_dojo_tag_ids)) {
-        $dojo_tags = get_terms([
-            'taxonomy' => 'post_tag',
-            'hide_empty' => false,
-            'include' => array_map('intval', $allowed_dojo_tag_ids),
-            'orderby' => 'name',
-            'order' => 'ASC',
-        ]);
-        if (is_wp_error($dojo_tags)) {
-            $dojo_tags = [];
+        $terms = [];
+        foreach ($ids as $id) {
+            $term = get_term($id, 'post_tag');
+            if (!is_wp_error($term) && $term && !empty($term->term_id)) {
+                $terms[] = $term;
+            }
         }
-    }
+
+        usort($terms, static function ($a, $b): int {
+            return strcasecmp((string) $a->name, (string) $b->name);
+        });
+
+        return $terms;
+    };
+
+    $activity_tags = $get_tags_by_ids($allowed_activity_tag_ids);
+    $dojo_tags = $get_tags_by_ids($allowed_dojo_tag_ids);
 
     ob_start();
     ?>
@@ -136,7 +132,7 @@ function pact_render_form_shortcode($atts = []): string {
                 </div>
 
                 <div class="pact-field">
-                    <label for="pact_persona_contacto"><?php echo esc_html__('Persona contacto', 'publicacion-actividades'); ?> <span aria-hidden="true">*</span></label>
+                    <label for="pact_persona_contacto"><?php echo esc_html__('Persona contacto', 'publicacion-actividades'); ?></label>
                     <input id="pact_persona_contacto" name="pact_persona_contacto" type="text" autocomplete="name" />
                 </div>
 
