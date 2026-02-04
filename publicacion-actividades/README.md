@@ -13,10 +13,11 @@
 
 1. Copia la carpeta `publicacion-actividades/` a:
    - `wp-content/plugins/publicacion-actividades/`
-2. Activa el plugin en *Plugins*.
-3. Ve a *Ajustes → Publicación Actividades*:
+2. Activa el plugin en _Plugins_.
+3. Ve a _Ajustes → Publicación Actividades_:
    - Selecciona roles permitidos
    - Selecciona las etiquetas permitidas
+    - Selecciona la categoría por defecto (opcional)
    - Configura emails de aviso al enviar (opcional)
    - Configura emails de aviso al publicarse (opcional)
 4. Inserta el shortcode en una página.

@@ -41,6 +41,14 @@ function pact_register_settings(): void {
     );
 
     add_settings_field(
+        'default_category_id',
+        __('Categoría por defecto', 'publicacion-actividades'),
+        'pact_field_default_category',
+        'pact_settings',
+        'pact_section_main'
+    );
+
+    add_settings_field(
         'email_to_submitter',
         __('Aviso al publicarse (al solicitante)', 'publicacion-actividades'),
         'pact_field_email_to_submitter',
@@ -128,6 +136,15 @@ function pact_sanitize_options($input): array {
     $tag_ids = array_values(array_filter(array_map('absint', $tag_ids)));
     $output['allowed_tag_ids'] = $tag_ids;
 
+    // Default category.
+    $cat_id = isset($input['default_category_id']) ? absint((string) $input['default_category_id']) : 0;
+    if ($cat_id > 0) {
+        $term = get_term($cat_id, 'category');
+        $output['default_category_id'] = (!is_wp_error($term) && $term && !empty($term->term_id)) ? (int) $term->term_id : 0;
+    } else {
+        $output['default_category_id'] = 0;
+    }
+
     // Email flags.
     $output['email_to_submitter'] = !empty($input['email_to_submitter']) ? 1 : 0;
 
@@ -194,6 +211,23 @@ function pact_field_allowed_tags(): void {
     }
     echo '</select>';
     echo '<p class="description">' . esc_html__('Selecciona qué etiquetas pueden elegirse en el desplegable del formulario (al menos 1).', 'publicacion-actividades') . '</p>';
+}
+
+function pact_field_default_category(): void {
+    $options = pact_options_get();
+    $selected = isset($options['default_category_id']) ? (int) $options['default_category_id'] : 0;
+
+    wp_dropdown_categories([
+        'taxonomy' => 'category',
+        'hide_empty' => 0,
+        'name' => esc_attr(PACT_OPTION_KEY) . '[default_category_id]',
+        'selected' => $selected,
+        'show_option_none' => __('— Sin categoría por defecto —', 'publicacion-actividades'),
+        'option_none_value' => '0',
+        'orderby' => 'name',
+    ]);
+
+    echo '<p class="description">' . esc_html__('Se asignará esta categoría automáticamente a los posts creados por el formulario (además de la etiqueta).', 'publicacion-actividades') . '</p>';
 }
 
 function pact_field_email_to_submitter(): void {

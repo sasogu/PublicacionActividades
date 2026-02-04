@@ -16,6 +16,9 @@ function pact_options_default(): array {
         // Etiquetas (tags) permitidas para el desplegable (IDs).
         'allowed_tag_ids' => [],
 
+        // Categoría por defecto para los posts creados (ID). 0 = sin asignar.
+        'default_category_id' => 0,
+
         // Email: enviar al usuario solicitante.
         'email_to_submitter' => 1,
 
