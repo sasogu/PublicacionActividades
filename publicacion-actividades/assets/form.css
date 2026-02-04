@@ -1,0 +1,11 @@
+.pact-form{max-width:720px;margin:1.5rem 0;padding:1rem;border:1px solid #e2e8f0;border-radius:10px;background:#fff}
+.pact-field{margin:0 0 1rem}
+.pact-field label{display:block;font-weight:600;margin:0 0 .35rem}
+.pact-field input[type=text],.pact-field textarea,.pact-field select{width:100%;max-width:100%;padding:.6rem .7rem;border:1px solid #cbd5e1;border-radius:8px;font:inherit}
+.pact-actions button{padding:.65rem 1rem;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer}
+.pact-actions button:hover{background:#1d4ed8}
+.pact-notice{padding:.75rem 1rem;border-radius:10px;margin:0 0 1rem}
+.pact-notice--success{background:#ecfdf5;border:1px solid #34d399}
+.pact-notice--error{background:#fef2f2;border:1px solid #f87171}
+.pact-notice--warning{background:#fffbeb;border:1px solid #fbbf24}
+.pact-help{color:#475569;margin:.75rem 0 0}
