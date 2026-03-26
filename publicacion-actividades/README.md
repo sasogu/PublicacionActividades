@@ -2,15 +2,13 @@
 
 ## Qué hace
 
-- El contenido del post se genera como **bloques de Gutenberg** (encabezados/listas/párrafos)
-- Crea una entrada en estado **Pendiente de revisión** (pending)
-- Asigna **etiquetas** configuradas desde ajustes (2 listas: “Tipo actividad” y “Dojo solicitante”)
-  - Nota: estas selecciones se usan para etiquetar el post, pero no se imprimen dentro del bloque “Datos de la actividad”
-- Permite adjuntar **una o varias imágenes** desde el formulario
-  - Si se adjunta 1 imagen: se inserta un bloque `Imagen`
-  - Si se adjuntan 2+ imágenes: se inserta un bloque `Galería`
-  - La primera imagen se establece como **imagen destacada** (si el post no tenía)
-- Puede enviar emails de aviso al enviar y/o al publicarse (configurable)
+- Envía por **correo electrónico** toda la solicitud enviada desde el formulario
+- Incluye en el correo todos los campos del formulario en formato legible
+- Permite adjuntar **una o varias imágenes** desde el formulario y las envía como adjuntos del correo
+- Usa listas de etiquetas configuradas desde ajustes para los selectores de:
+  - Tipo de actividad
+  - Dojo solicitante
+- Puede enviar el correo a destinatarios principales, destinatarios adicionales y opcionalmente al propio solicitante
 
 ## Instalación
 
@@ -22,13 +20,13 @@
    - Selecciona las etiquetas permitidas para:
      - Tipo de actividad
      - Dojo solicitante
-   - Selecciona la categoría por defecto (opcional)
-   - Configura emails de aviso al enviar (opcional)
-   - Configura emails de aviso al publicarse (opcional)
+   - Configura destinatarios y plantillas del correo principal
+   - Configura, si quieres, una copia al solicitante
 4. Inserta el shortcode en una página:
    - `[publicacion_actividades_form]`
 
 ## Notas
 
-- El aviso de publicación solo se envía para posts creados por este formulario (se marca con meta `_pact_submission`).
-- Variables disponibles en la plantilla de email: `{display_name}`, `{post_title}`, `{post_url}`
+- El plugin ya no crea entradas de WordPress; el envío se resuelve íntegramente por email.
+- La opción de categoría por defecto se mantiene en ajustes por compatibilidad, pero ya no tiene efecto.
+- Variables disponibles en las plantillas: `{display_name}`, `{user_email}`, `{post_title}`, `{submission_summary}`, `{tipo_actividad}`, `{dojo_solicitante}`, `{fecha}`, `{hora}`, `{lugar}`, `{aportacion}`, `{email_contacto}`, `{persona_contacto}`, `{telefono_contacto}`, `{descripcion}`

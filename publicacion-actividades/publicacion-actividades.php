@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Publicación de Actividades
- * Description: Formulario (por roles) para solicitar publicaciones; crea posts en estado pendiente y notifica por email al publicarse.
- * Version: 0.4.0
+ * Description: Formulario (por roles) para enviar solicitudes de actividades por correo electrónico, con imágenes adjuntas.
+ * Version: 0.5.4
  * Author: Tu equipo
  * Text Domain: publicacion-actividades
  * Domain Path: /languages
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('PACT_PLUGIN_VERSION', '0.4.0');
+define('PACT_PLUGIN_VERSION', '0.5.4');
 define('PACT_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PACT_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('PACT_OPTION_KEY', 'pact_options');
@@ -49,6 +49,3 @@ add_action('wp_enqueue_scripts', function (): void {
 
 // Handler del formulario (solo usuarios logueados).
 add_action('admin_post_pact_submit', 'pact_handle_form_submission');
-
-// Notificación al publicarse (solo posts creados por este plugin).
-add_action('transition_post_status', 'pact_maybe_send_publish_email', 10, 3);

@@ -31,13 +31,13 @@ function pact_options_default(): array {
         // Email: avisos cuando un usuario envía el formulario (destinatarios coma-separados).
         'submission_notify_recipients' => '',
 
-        // Plantillas para aviso de envío.
-        'submission_email_subject' => 'Nueva solicitud pendiente: {post_title}',
-        'submission_email_body' => "Se ha enviado una nueva solicitud y queda pendiente de revisión.\n\nUsuario: {display_name}\nTítulo: {post_title}\nEditar: {edit_url}\n",
+        // Plantillas para el email principal con la solicitud completa.
+        'submission_email_subject' => 'Nueva solicitud de actividad: {post_title}',
+        'submission_email_body' => "Se ha recibido una nueva solicitud de actividad.\n\nSolicitante: {display_name}\nUsuario: {user_email}\nTítulo: {post_title}\n\n{submission_summary}\n",
 
-        // Plantillas.
-        'email_subject' => 'Tu solicitud se ha publicado: {post_title}',
-        'email_body' => "Hola {display_name},\n\nTu solicitud ya está publicada.\n\nTítulo: {post_title}\nEnlace: {post_url}\n\nGracias.",
+        // Plantillas para copia/acuse al solicitante.
+        'email_subject' => 'Hemos recibido tu solicitud: {post_title}',
+        'email_body' => "Hola {display_name},\n\nHemos recibido correctamente tu solicitud de actividad con estos datos:\n\n{submission_summary}\n",
     ];
 }
 

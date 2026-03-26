@@ -19,7 +19,7 @@ function pact_register_settings(): void {
         'pact_section_main',
         __('Publicación de Actividades', 'publicacion-actividades'),
         function (): void {
-            echo '<p>' . esc_html__('Configura quién puede solicitar publicaciones, qué etiquetas se pueden elegir y cómo se envían los avisos.', 'publicacion-actividades') . '</p>';
+            echo '<p>' . esc_html__('Configura quién puede enviar solicitudes, qué etiquetas se pueden elegir y cómo se envían los correos.', 'publicacion-actividades') . '</p>';
         },
         'pact_settings'
     );
@@ -50,7 +50,7 @@ function pact_register_settings(): void {
 
     add_settings_field(
         'default_category_id',
-        __('Categoría por defecto', 'publicacion-actividades'),
+        __('Categoría por defecto (sin uso)', 'publicacion-actividades'),
         'pact_field_default_category',
         'pact_settings',
         'pact_section_main'
@@ -58,7 +58,7 @@ function pact_register_settings(): void {
 
     add_settings_field(
         'email_to_submitter',
-        __('Aviso al publicarse (al solicitante)', 'publicacion-actividades'),
+        __('Copia al solicitante', 'publicacion-actividades'),
         'pact_field_email_to_submitter',
         'pact_settings',
         'pact_section_main'
@@ -66,7 +66,7 @@ function pact_register_settings(): void {
 
     add_settings_field(
         'email_extra_recipients',
-        __('Destinatarios extra (coma-separados)', 'publicacion-actividades'),
+        __('Destinatarios adicionales (coma-separados)', 'publicacion-actividades'),
         'pact_field_email_extra_recipients',
         'pact_settings',
         'pact_section_main'
@@ -74,7 +74,7 @@ function pact_register_settings(): void {
 
     add_settings_field(
         'submission_notify_recipients',
-        __('Aviso al enviar (destinatarios)', 'publicacion-actividades'),
+        __('Destinatarios principales del envío', 'publicacion-actividades'),
         'pact_field_submission_notify_recipients',
         'pact_settings',
         'pact_section_main'
@@ -82,7 +82,7 @@ function pact_register_settings(): void {
 
     add_settings_field(
         'submission_email_templates',
-        __('Plantillas email (aviso al enviar)', 'publicacion-actividades'),
+        __('Plantillas email (envío principal)', 'publicacion-actividades'),
         'pact_field_submission_email_templates',
         'pact_settings',
         'pact_section_main'
@@ -90,7 +90,7 @@ function pact_register_settings(): void {
 
     add_settings_field(
         'email_templates',
-        __('Plantillas de email', 'publicacion-actividades'),
+        __('Plantillas de email (copia al solicitante)', 'publicacion-actividades'),
         'pact_field_email_templates',
         'pact_settings',
         'pact_section_main'
@@ -263,7 +263,7 @@ function pact_field_default_category(): void {
         'orderby' => 'name',
     ]);
 
-    echo '<p class="description">' . esc_html__('Se asignará esta categoría automáticamente a los posts creados por el formulario (además de la etiqueta).', 'publicacion-actividades') . '</p>';
+    echo '<p class="description">' . esc_html__('Esta opción se mantiene por compatibilidad, pero ya no tiene efecto porque el formulario no crea entradas.', 'publicacion-actividades') . '</p>';
 }
 
 function pact_field_email_to_submitter(): void {
@@ -272,7 +272,7 @@ function pact_field_email_to_submitter(): void {
 
     echo '<label>';
     echo '<input type="checkbox" name="' . esc_attr(PACT_OPTION_KEY) . '[email_to_submitter]" value="1" ' . $checked . ' /> ';
-    echo esc_html__('Enviar email al usuario que envió la solicitud cuando el post pase a publicado (activado por defecto).', 'publicacion-actividades');
+    echo esc_html__('Enviar también una copia del correo al usuario que envió la solicitud.', 'publicacion-actividades');
     echo '</label>';
 }
 
@@ -288,7 +288,7 @@ function pact_field_submission_notify_recipients(): void {
     $value = (string) ($options['submission_notify_recipients'] ?? '');
 
     echo '<input type="text" class="regular-text" name="' . esc_attr(PACT_OPTION_KEY) . '[submission_notify_recipients]" value="' . esc_attr($value) . '" placeholder="comunicacion@tu-dominio.com, admin@tu-dominio.com" />';
-    echo '<p class="description">' . esc_html__('Se avisará a estos correos cuando un usuario envíe el formulario y se cree el post pendiente.', 'publicacion-actividades') . '</p>';
+    echo '<p class="description">' . esc_html__('Este es el listado principal de correos que recibirá la solicitud completa al enviar el formulario.', 'publicacion-actividades') . '</p>';
 }
 
 function pact_field_submission_email_templates(): void {
@@ -302,7 +302,7 @@ function pact_field_submission_email_templates(): void {
     echo '<p><label>' . esc_html__('Cuerpo', 'publicacion-actividades') . '</label><br />';
     echo '<textarea class="large-text" rows="8" name="' . esc_attr(PACT_OPTION_KEY) . '[submission_email_body]">' . esc_textarea($body) . '</textarea></p>';
 
-    echo '<p class="description">' . esc_html__('Variables disponibles: {display_name}, {post_title}, {edit_url}', 'publicacion-actividades') . '</p>';
+    echo '<p class="description">' . esc_html__('Variables disponibles: {display_name}, {user_email}, {post_title}, {submission_summary}, {tipo_actividad}, {dojo_solicitante}, {fecha}, {hora}, {lugar}, {aportacion}, {email_contacto}, {persona_contacto}, {telefono_contacto}, {descripcion}', 'publicacion-actividades') . '</p>';
 }
 
 function pact_field_email_templates(): void {
@@ -316,5 +316,5 @@ function pact_field_email_templates(): void {
     echo '<p><label>' . esc_html__('Cuerpo', 'publicacion-actividades') . '</label><br />';
     echo '<textarea class="large-text" rows="8" name="' . esc_attr(PACT_OPTION_KEY) . '[email_body]">' . esc_textarea($body) . '</textarea></p>';
 
-    echo '<p class="description">' . esc_html__('Variables disponibles: {display_name}, {post_title}, {post_url}', 'publicacion-actividades') . '</p>';
+    echo '<p class="description">' . esc_html__('Variables disponibles: {display_name}, {user_email}, {post_title}, {submission_summary}, {tipo_actividad}, {dojo_solicitante}, {fecha}, {hora}, {lugar}, {aportacion}, {email_contacto}, {persona_contacto}, {telefono_contacto}, {descripcion}', 'publicacion-actividades') . '</p>';
 }
